@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { analyzeClinicalNotes } from "@/lib/clinicalEngine";
+import { analyzeWithOllama, isOllamaEnabled } from "@/lib/ollama";
 import { detectPhi } from "@/lib/piiGuard";
 
 type AnalyzeBody = {
@@ -45,8 +46,25 @@ export async function POST(req: Request) {
     );
   }
 
+  if (isOllamaEnabled()) {
+    try {
+      const ollamaResult = await analyzeWithOllama({ notes, summary });
+
+      return NextResponse.json({
+        ok: true,
+        analysis: ollamaResult.analysis,
+        provider: "ollama",
+        model: ollamaResult.model,
+      });
+    } catch (error) {
+      console.error("Ollama analysis failed, falling back to rule engine.", error);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     analysis: analyzeClinicalNotes({ notes, summary }),
+    provider: "rules",
+    model: "built-in-rules",
   });
 }

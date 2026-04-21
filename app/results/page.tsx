@@ -18,6 +18,8 @@ type ClinicalAnalysis = {
   safetyNote: string;
 };
 
+type AnalysisProvider = "ollama" | "rules";
+
 function OutputCard({
   title,
   items,
@@ -50,6 +52,8 @@ export default function ResultsPage() {
   const { status } = useSession();
   const router = useRouter();
   const [analysis, setAnalysis] = useState<ClinicalAnalysis | null>(null);
+  const [provider, setProvider] = useState<AnalysisProvider | null>(null);
+  const [modelName, setModelName] = useState("");
   const [error, setError] = useState("");
 
   const payload = useMemo<ConsultPayload | null>(() => {
@@ -86,7 +90,7 @@ export default function ResultsPage() {
       });
 
       const data = (await response.json()) as
-        | { ok: true; analysis: ClinicalAnalysis }
+        | { ok: true; analysis: ClinicalAnalysis; provider?: AnalysisProvider; model?: string }
         | { ok: false; error?: string };
 
       if (isCancelled) {
@@ -101,6 +105,8 @@ export default function ResultsPage() {
       }
 
       setAnalysis(data.analysis);
+      setProvider(data.provider ?? null);
+      setModelName(data.model ?? "");
     }
 
     void runAnalysis();
@@ -129,13 +135,38 @@ export default function ResultsPage() {
     <main className="min-h-screen py-10">
       <section className="container-frame space-y-6 fade-in">
         <header className="surface-card p-6 md:p-7">
-          <span className="pill mb-3">Step 3 of 3</span>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="pill">Step 3 of 3</span>
+            {provider && (
+              <span
+                className={`pill ${
+                  provider === "ollama"
+                    ? "border-emerald-300/35 bg-emerald-500/12 text-emerald-100"
+                    : "border-amber-300/35 bg-amber-400/12 text-amber-100"
+                }`}
+              >
+                Source: {provider === "ollama" ? "Ollama Local LLM" : "Rule Engine Fallback"}
+              </span>
+            )}
+          </div>
           <h1 className="display-title text-3xl md:text-4xl">
             Clinical Reasoning Support
           </h1>
           <p className="mt-3 text-cyan-50/80">
             Assistive output based on clinician-provided notes.
           </p>
+          {provider && (
+            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-cyan-100/60">
+              {provider === "ollama"
+                ? "Generated through your local Ollama model."
+                : "Local LLM unavailable, so the built-in rules engine handled this case."}
+            </p>
+          )}
+          {modelName && (
+            <p className="mt-1 text-sm text-cyan-100/70">
+              Active model: <span className="font-medium text-cyan-50">{modelName}</span>
+            </p>
+          )}
         </header>
 
         <section className="surface-card p-6 space-y-3">
