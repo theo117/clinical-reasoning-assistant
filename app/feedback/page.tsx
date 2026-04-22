@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 const usefulnessOptions = ["Yes", "Partly", "No"] as const;
+const feedbackEmail = "theodorelnelson@outlook.com";
+const whatsappNumber = "27606360886";
 
 export default function FeedbackPage() {
   const [caseType, setCaseType] = useState("");
@@ -24,6 +27,19 @@ export default function FeedbackPage() {
       ].join("\n"),
     [caseType, useful, strongPoints, missingPoints, reuseIntent]
   );
+
+  const emailHref = useMemo(() => {
+    const subject = encodeURIComponent("Clinical Reasoning Assistant Pilot Feedback");
+    const body = encodeURIComponent(summary);
+    return `mailto:${feedbackEmail}?subject=${subject}&body=${body}`;
+  }, [summary]);
+
+  const whatsappHref = useMemo(() => {
+    const message = encodeURIComponent(
+      `Clinical Reasoning Assistant Pilot Feedback\n\n${summary}`
+    );
+    return `https://wa.me/${whatsappNumber}?text=${message}`;
+  }, [summary]);
 
   async function handleCopy() {
     try {
@@ -137,6 +153,28 @@ export default function FeedbackPage() {
             >
               {copied ? "Copied" : "Copy Feedback Summary"}
             </button>
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href={emailHref}
+                className="btn-muted px-5 py-3 text-sm"
+              >
+                Send By Email
+              </Link>
+              <Link
+                href={whatsappHref}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-muted px-5 py-3 text-sm"
+              >
+                Send By WhatsApp
+              </Link>
+            </div>
+
+            <div className="rounded-xl border border-cyan-200/15 bg-cyan-950/35 p-4 text-sm text-cyan-100/82">
+              <p>Email: {feedbackEmail}</p>
+              <p className="mt-2">WhatsApp: +27 60 636 0886</p>
+            </div>
 
             <div className="rounded-xl border border-amber-300/35 bg-amber-400/10 p-4 text-sm text-amber-100">
               Keep feedback anonymized. Do not paste real patient details into
