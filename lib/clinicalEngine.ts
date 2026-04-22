@@ -83,6 +83,40 @@ const RULESETS: RuleSet[] = [
     ],
   },
   {
+    name: "infection-fever",
+    matchers: [
+      /\bfever\b/i,
+      /\bpyrexia\b/i,
+      /\bchills?\b/i,
+      /\brigors?\b/i,
+      /\bunwell\b/i,
+    ],
+    considerations: [
+      "Viral or bacterial infective process",
+      "Early sepsis or systemic infection if physiology is abnormal",
+      "Localized infection requiring source review",
+      "Non-infective inflammatory cause if infection is not supported",
+    ],
+    suggestedChecks: [
+      "Full vital signs review including temperature and blood pressure",
+      "Look for likely infective source on focused history and examination",
+      "Assess hydration, perfusion, and mental state",
+      "Basic bloods and cultures if clinically indicated",
+    ],
+    redFlags: [
+      "Hypotension, tachycardia, or altered mental status",
+      "Escalating fever with rigors or poor oral intake",
+      "Concern for sepsis, meningism, or severe focal infection",
+      "Immunocompromise or frailty with systemic symptoms",
+    ],
+    lessLikely: [
+      "Minor self-limited illness if systemic compromise is described",
+    ],
+    detectedSignals: [
+      "Systemic infective symptom language detected",
+    ],
+  },
+  {
     name: "abdominal",
     matchers: [/\babdominal pain\b/i, /\bepigastric\b/i, /\bruq\b/i, /\bnausea\b/i, /\bvomit(?:ing)?\b/i],
     considerations: [
@@ -108,6 +142,74 @@ const RULESETS: RuleSet[] = [
     ],
     detectedSignals: [
       "Abdominal symptom language detected",
+    ],
+  },
+  {
+    name: "urinary",
+    matchers: [
+      /\bdysuria\b/i,
+      /\bfrequency\b/i,
+      /\burgency\b/i,
+      /\bflank pain\b/i,
+      /\bhaematuria\b|\bhematuria\b/i,
+    ],
+    considerations: [
+      "Lower urinary tract infection",
+      "Pyelonephritis or upper urinary infection",
+      "Renal colic or obstructive uropathy",
+      "Non-infective urinary tract irritation or bleeding source",
+    ],
+    suggestedChecks: [
+      "Urinalysis and focused urinary symptom review",
+      "Temperature, hydration status, and CVA tenderness assessment",
+      "Pregnancy status where relevant",
+      "Renal imaging if obstruction, severe pain, or recurrent stone history is suspected",
+    ],
+    redFlags: [
+      "Fever with flank pain or vomiting",
+      "Sepsis physiology or inability to tolerate fluids",
+      "Visible hematuria with clots or retention symptoms",
+      "Single kidney, pregnancy, or obstruction concern",
+    ],
+    lessLikely: [
+      "Simple cystitis if systemic illness or severe flank pain is present",
+    ],
+    detectedSignals: [
+      "Urinary tract symptom language detected",
+    ],
+  },
+  {
+    name: "back-pain",
+    matchers: [
+      /\bback pain\b/i,
+      /\blower back\b/i,
+      /\blumbar\b/i,
+      /\bsciatica\b/i,
+      /\bradicular\b/i,
+    ],
+    considerations: [
+      "Mechanical back pain",
+      "Radicular irritation or nerve root compression",
+      "Spinal infection or malignancy if risk features fit",
+      "Renal or referred pain source if history is atypical",
+    ],
+    suggestedChecks: [
+      "Focused spine and neurologic examination",
+      "Clarify trauma, cancer, steroid, and infection history",
+      "Assess mobility, bladder or bowel symptoms, and saddle sensation",
+      "Imaging only if red flags or persistent severe symptoms support it",
+    ],
+    redFlags: [
+      "Urinary retention or bowel dysfunction",
+      "Saddle anesthesia or progressive neurologic deficit",
+      "Fever, immunosuppression, or malignancy history",
+      "Major trauma or suspected fracture",
+    ],
+    lessLikely: [
+      "Simple mechanical strain if cauda equina or infection features are present",
+    ],
+    detectedSignals: [
+      "Back pain language detected",
     ],
   },
   {
@@ -138,6 +240,40 @@ const RULESETS: RuleSet[] = [
       "Neurologic symptom language detected",
     ],
   },
+  {
+    name: "dizziness-syncope",
+    matchers: [
+      /\bdizz(?:y|iness)\b/i,
+      /\blight-?headed\b/i,
+      /\bvertigo\b/i,
+      /\bsyncope\b/i,
+      /\bfaint(?:ed|ing)?\b/i,
+    ],
+    considerations: [
+      "Benign vestibular or orthostatic cause",
+      "Cardiovascular or arrhythmic event requiring exclusion",
+      "Volume depletion or medication-related effect",
+      "Neurologic cause if focal features or severe headache coexist",
+    ],
+    suggestedChecks: [
+      "Orthostatic vitals and cardiovascular assessment",
+      "Clarify triggers, prodrome, loss of consciousness, and recovery",
+      "Medication and fluid balance review",
+      "ECG and escalation if syncope or high-risk features are present",
+    ],
+    redFlags: [
+      "Exertional syncope or no prodrome",
+      "Chest pain, palpitations, or breathlessness around the event",
+      "Neurologic deficit, severe headache, or persistent confusion",
+      "Injury from collapse or recurrent episodes",
+    ],
+    lessLikely: [
+      "Benign positional dizziness if cardiovascular or neurologic features dominate",
+    ],
+    detectedSignals: [
+      "Dizziness or syncope language detected",
+    ],
+  },
 ];
 
 const RISK_SIGNAL_RULES: Array<{ label: string; regex: RegExp; checks?: string[]; flags?: string[] }> = [
@@ -160,6 +296,12 @@ const RISK_SIGNAL_RULES: Array<{ label: string; regex: RegExp; checks?: string[]
     label: "Fever reported",
     regex: /\bfever\b|\bpyrexia\b/i,
     flags: ["Infective cause moves higher if systemic features are present"],
+  },
+  {
+    label: "Pregnancy context noted",
+    regex: /\bpregnan(?:t|cy)\b|\bantepartum\b|\bpostpartum\b/i,
+    checks: ["Adjust differential and medication safety to pregnancy context"],
+    flags: ["Escalate earlier where pregnancy-related risk could change urgency"],
   },
   {
     label: "Syncope reported",
@@ -249,7 +391,8 @@ export function analyzeClinicalNotes(input: {
   if (possibleConsiderations.length === 0) {
     possibleConsiderations.push(
       "Broad undifferentiated presentation based on limited rule matches",
-      "Common benign causes should be balanced against time-critical pathology"
+      "Common benign causes should be balanced against time-critical pathology",
+      "Prototype rule coverage is strongest for chest pain, respiratory, abdominal, neurologic, infection, urinary, back pain, and dizziness presentations"
     );
   }
 
@@ -280,6 +423,6 @@ export function analyzeClinicalNotes(input: {
     lessLikely: unique(lessLikely).slice(0, 4),
     detectedSignals: unique(detectedSignals).slice(0, 6),
     safetyNote:
-      "Rule-based support only. This does not diagnose, prescribe, or replace clinical judgment.",
+      "Rule-based support only. This prototype is strongest for a limited set of presentation patterns and does not diagnose, prescribe, or replace clinical judgment.",
   };
 }

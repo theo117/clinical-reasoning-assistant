@@ -1,4 +1,5 @@
 import "./globals.css";
+import AppHeader from "./components/AppHeader";
 import Providers from "./components/Providers";
 
 export default function RootLayout({
@@ -9,7 +10,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="app-shell min-h-screen text-gray-100 antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppHeader />
+          {children}
+        </Providers>
       </body>
     </html>
   );

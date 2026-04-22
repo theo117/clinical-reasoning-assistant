@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Clinical Reasoning Assistant
 
-## Getting Started
+Private pilot build for early clinician feedback on a documentation-first,
+assistive clinical reasoning workflow.
 
-First, run the development server:
+## Pilot Focus
+
+The current prototype is strongest for these note patterns:
+
+- chest pain
+- respiratory symptoms
+- abdominal pain
+- neurologic symptoms
+- infection or fever
+- urinary presentations
+- back pain
+- dizziness or syncope
+
+The app is assistive only. It does not diagnose, prescribe, or replace
+clinical judgment. Testers should never enter real patient-identifiable
+information.
+
+## Local Setup
+
+1. Copy `.env.example` values into `.env.local`.
+2. Set a strong `NEXTAUTH_SECRET`.
+3. Add one or more invited pilot accounts to `PILOT_DOCTOR_ACCOUNTS`.
+4. Keep `OLLAMA_ENABLED=false` for remote low-spec testers unless you know they
+   have a local Ollama setup.
+5. Start the app with:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Pilot Pages
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+These routes are useful when sharing the app with family-doctor testers:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/pilot` for the tester guide and sample case prompts
+- `/feedback` for a simple structured feedback form that copies into a message
 
-## Learn More
+## Suggested Test Flow
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Give each tester private login credentials.
+2. Ask them to try 2 to 4 anonymized sample cases.
+3. Ask whether the output felt useful, what was missing, and whether they
+   would use something like this again.
+4. Collect feedback through the `/feedback` page or over WhatsApp/email.

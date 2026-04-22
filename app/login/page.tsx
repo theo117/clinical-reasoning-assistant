@@ -5,8 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const demoEmail = "doctor@example.com";
-  const demoPassword = "DevOnly!456";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,26 +25,21 @@ export default function LoginPage() {
             <ul className="mt-6 space-y-2 text-sm text-cyan-100/80">
               <li>Session protected</li>
               <li>Clinician-facing workflow</li>
-              <li>Ready for backend LLM connection</li>
+              <li>Private pilot access only</li>
             </ul>
             <div className="mt-6 rounded-xl border border-cyan-200/20 bg-cyan-950/35 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-cyan-100/65">
-                Public Demo Notice
+                Pilot Access Notice
               </p>
               <p className="mt-3 text-sm text-cyan-50/90">
-                This app is shared for public testing and feedback only. Do not
-                enter real patient data.
+                Access is intended for invited testers only. Share credentials
+                privately and avoid entering real patient data.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail(demoEmail);
-                  setPassword(demoPassword);
-                }}
-                className="btn-muted mt-4 px-4 py-2 text-sm"
-              >
-                Use Demo Login
-              </button>
+              <p className="mt-3 text-sm text-cyan-100/80">
+                If someone needs access, add them to the pilot account list in
+                your environment settings rather than publishing one public
+                demo login.
+              </p>
             </div>
           </aside>
 
@@ -69,7 +62,7 @@ export default function LoginPage() {
                 return;
               }
 
-              setError("Sign-in failed. Check your credentials and retry.");
+              setError("Sign-in failed. Use an invited pilot account and retry.");
             }}
             className="surface-card p-7 space-y-4"
           >

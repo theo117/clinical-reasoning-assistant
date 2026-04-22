@@ -1,8 +1,40 @@
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-const demoEmail = process.env.DEMO_DOCTOR_EMAIL;
-const demoPassword = process.env.DEMO_DOCTOR_PASSWORD;
+type PilotAccount = {
+  email: string;
+  password: string;
+};
+
+function parsePilotAccounts(): PilotAccount[] {
+  const configuredAccounts = process.env.PILOT_DOCTOR_ACCOUNTS;
+
+  if (configuredAccounts) {
+    return configuredAccounts
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [email, password] = entry.split(":").map((part) => part.trim());
+
+        if (!email || !password) {
+          return null;
+        }
+
+        return { email, password };
+      })
+      .filter((account): account is PilotAccount => Boolean(account));
+  }
+
+  const singleEmail = process.env.DEMO_DOCTOR_EMAIL?.trim();
+  const singlePassword = process.env.DEMO_DOCTOR_PASSWORD?.trim();
+
+  if (!singleEmail || !singlePassword) {
+    return [];
+  }
+
+  return [{ email: singleEmail, password: singlePassword }];
+}
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -14,18 +46,26 @@ export const authOptions: NextAuthOptions = {
         password: { type: "password" },
       },
       async authorize(credentials) {
-        if (!demoEmail || !demoPassword) {
+        const pilotAccounts = parsePilotAccounts();
+
+        if (pilotAccounts.length === 0) {
           throw new Error(
-            "Missing demo authentication environment variables."
+            "Missing pilot authentication environment variables."
           );
         }
 
-        if (
-          credentials?.email === demoEmail &&
-          credentials?.password === demoPassword
-        ) {
-          return { id: "1", email: credentials.email };
+        const email = credentials?.email?.trim().toLowerCase();
+        const password = credentials?.password?.trim();
+
+        const matchedAccount = pilotAccounts.find(
+          (account) =>
+            account.email.toLowerCase() === email && account.password === password
+        );
+
+        if (matchedAccount) {
+          return { id: matchedAccount.email, email: matchedAccount.email };
         }
+
         return null;
       },
     }),

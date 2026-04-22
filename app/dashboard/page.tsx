@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -51,6 +52,23 @@ export default function Dashboard() {
             Capture relevant symptoms, risk factors, exclusions, and timeline.
             This content remains clinician-authored and assistive.
           </p>
+
+          <div className="rounded-xl border border-amber-300/35 bg-amber-400/10 p-4 text-sm text-amber-100">
+            <p className="font-semibold text-amber-50">Pilot coverage guidance</p>
+            <p className="mt-2 text-amber-100/90">
+              This prototype is currently strongest on chest pain, respiratory,
+              abdominal, neurologic, infection, urinary, back pain, and
+              dizziness or syncope presentations.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/pilot" className="btn-muted px-4 py-2 text-sm">
+                View Tester Guide
+              </Link>
+              <Link href="/feedback" className="btn-muted px-4 py-2 text-sm">
+                Open Feedback Form
+              </Link>
+            </div>
+          </div>
 
           <textarea
             value={notes}

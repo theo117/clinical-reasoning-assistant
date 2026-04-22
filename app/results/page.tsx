@@ -184,6 +184,11 @@ export default function ResultsPage() {
               rules because a reachable Ollama model was not available for this
               request.
             </p>
+            <p className="mt-2 text-amber-100/90">
+              The prototype is most dependable for chest pain, respiratory,
+              abdominal, neurologic, infection, urinary, back pain, and
+              dizziness or syncope note patterns.
+            </p>
           </section>
         )}
 
