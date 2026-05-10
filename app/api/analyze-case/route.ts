@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { analyzeClinicalNotes } from "@/lib/clinicalEngine";
 import { analyzeWithOllama, isOllamaEnabled } from "@/lib/ollama";
-import { detectPhi } from "@/lib/piiGuard";
+import { validateCaseInput } from "@/lib/caseInput";
 
 type AnalyzeBody = {
   notes?: string;
@@ -31,20 +31,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const notes = body.notes ?? "";
-  const summary = body.summary ?? "";
-  const matches = detectPhi(`${notes}\n${summary}`);
+  const validation = validateCaseInput(body);
 
-  if (matches.length > 0) {
+  if (!validation.ok) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Possible PHI detected. Remove identifiers before analysis.",
-        matches,
+        error: validation.error,
+        matches: validation.matches,
       },
       { status: 400 }
     );
   }
+
+  const { notes, summary } = validation.input;
 
   if (isOllamaEnabled()) {
     try {

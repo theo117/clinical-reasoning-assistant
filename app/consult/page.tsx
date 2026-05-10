@@ -2,22 +2,29 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { detectPhi } from "@/lib/piiGuard";
+import { useEffect, useState } from "react";
+import {
+  formatValidationError,
+  MAX_SUMMARY_CHARS,
+  validateCaseInput,
+} from "@/lib/caseInput";
+
+type ValidationResponse = {
+  ok: boolean;
+  error?: string;
+  matches: Array<{ label: string }>;
+};
 
 export default function ConsultPage() {
   const { status } = useSession();
   const router = useRouter();
 
+  const [notes, setNotes] = useState<string | null>(null);
   const [summary, setSummary] = useState("");
   const [phiError, setPhiError] = useState("");
-
-  const notes = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-    return localStorage.getItem("consult_notes") ?? "";
-  }, []);
+  const [isValidating, setIsValidating] = useState(false);
+  const summaryRemaining = MAX_SUMMARY_CHARS - summary.length;
+  const canAnalyze = Boolean(notes?.trim()) && summary.length <= MAX_SUMMARY_CHARS && !isValidating;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -26,12 +33,60 @@ export default function ConsultPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (!notes) {
+    setNotes(localStorage.getItem("consult_notes") ?? "");
+  }, []);
+
+  useEffect(() => {
+    if (notes === "") {
       router.push("/dashboard");
     }
   }, [notes, router]);
 
-  if (status === "loading") {
+  async function handleAnalyze() {
+    if (!notes) {
+      router.push("/dashboard");
+      return;
+    }
+
+    const localValidation = validateCaseInput({ notes, summary });
+
+    if (!localValidation.ok) {
+      setPhiError(formatValidationError(localValidation));
+      return;
+    }
+
+    setIsValidating(true);
+    setPhiError("");
+
+    try {
+      const response = await fetch("/api/validate-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(localValidation.input),
+      });
+
+      const data = (await response.json()) as ValidationResponse;
+
+      if (!response.ok || !data.ok) {
+        const labels = data.matches?.map((match) => match.label).join(", ");
+        setPhiError(
+          labels
+            ? `${data.error ?? "Possible PHI detected."} (${labels}).`
+            : data.error ?? "Validation failed. Please retry."
+        );
+        return;
+      }
+
+      localStorage.setItem("consult_payload", JSON.stringify(localValidation.input));
+      router.push("/results");
+    } catch {
+      setPhiError("Validation failed. Check your connection and retry.");
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  if (status === "loading" || notes === null) {
     return <div className="container-frame py-8 text-cyan-100">Loading...</div>;
   }
 
@@ -71,7 +126,16 @@ export default function ConsultPage() {
               }}
               placeholder="Key points for analysis: severity, onset, negatives, risk profile..."
               className="field-textarea min-h-[220px]"
+              aria-describedby="summary-guidance"
             />
+            <p
+              id="summary-guidance"
+              className={`text-xs ${
+                summaryRemaining < 0 ? "text-rose-100" : "text-cyan-100/60"
+              }`}
+            >
+              {summaryRemaining.toLocaleString()} characters remaining
+            </p>
           </section>
         </div>
 
@@ -87,39 +151,11 @@ export default function ConsultPage() {
           </button>
 
           <button
-            onClick={async () => {
-              const localMatches = detectPhi(`${notes}\n${summary}`);
-              if (localMatches.length > 0) {
-                const labels = localMatches.map((m) => m.label).join(", ");
-                setPhiError(`Possible PHI detected (${labels}). Remove identifiers before analysis.`);
-                return;
-              }
-
-              const response = await fetch("/api/validate-notes", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ notes, summary }),
-              });
-
-              if (!response.ok) {
-                setPhiError("Validation failed. Please retry.");
-                return;
-              }
-
-              const data = (await response.json()) as { ok: boolean; matches: Array<{ label: string }> };
-
-              if (!data.ok) {
-                const labels = data.matches.map((m) => m.label).join(", ");
-                setPhiError(`Possible PHI detected (${labels}). Remove identifiers before analysis.`);
-                return;
-              }
-
-              localStorage.setItem("consult_payload", JSON.stringify({ notes, summary }));
-              router.push("/results");
-            }}
-            className="btn-primary px-6 py-3"
+            onClick={handleAnalyze}
+            disabled={!canAnalyze}
+            className="btn-primary px-6 py-3 disabled:cursor-not-allowed disabled:opacity-55"
           >
-            Analyze Reasoning
+            {isValidating ? "Checking Summary..." : "Analyze Reasoning"}
           </button>
         </div>
       </section>

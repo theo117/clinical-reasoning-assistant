@@ -20,6 +20,18 @@ type ClinicalAnalysis = {
 
 type AnalysisProvider = "ollama" | "rules";
 
+type AnalysisResponse =
+  | { ok: true; analysis: ClinicalAnalysis; provider?: AnalysisProvider; model?: string }
+  | { ok: false; error?: string };
+
+async function readAnalysisResponse(response: Response): Promise<AnalysisResponse> {
+  try {
+    return (await response.json()) as AnalysisResponse;
+  } catch {
+    return { ok: false, error: "Analysis returned an unreadable response." };
+  }
+}
+
 function OutputCard({
   title,
   items,
@@ -79,19 +91,28 @@ export default function ResultsPage() {
     }
 
     let isCancelled = false;
+    const controller = new AbortController();
 
     async function runAnalysis() {
       setError("");
 
-      const response = await fetch("/api/analyze-case", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let response: Response;
 
-      const data = (await response.json()) as
-        | { ok: true; analysis: ClinicalAnalysis; provider?: AnalysisProvider; model?: string }
-        | { ok: false; error?: string };
+      try {
+        response = await fetch("/api/analyze-case", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        if (!isCancelled) {
+          setError("Analysis failed. Check your connection and retry.");
+        }
+        return;
+      }
+
+      const data = await readAnalysisResponse(response);
 
       if (isCancelled) {
         return;
@@ -113,6 +134,7 @@ export default function ResultsPage() {
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [payload]);
 
@@ -129,6 +151,12 @@ export default function ResultsPage() {
 
   if (status === "loading" || !payload || (!analysis && !error)) {
     return <div className="container-frame py-8 text-cyan-100">Analyzing...</div>;
+  }
+
+  function handleStartNew() {
+    localStorage.removeItem("consult_notes");
+    localStorage.removeItem("consult_payload");
+    router.push("/dashboard");
   }
 
   return (
@@ -245,7 +273,7 @@ export default function ResultsPage() {
             Back
           </button>
 
-          <button onClick={() => router.push("/dashboard")} className="btn-primary px-6 py-3">
+          <button onClick={handleStartNew} className="btn-primary px-6 py-3">
             Start New Consultation
           </button>
         </div>

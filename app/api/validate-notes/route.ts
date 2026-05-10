@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { detectPhi } from "@/lib/piiGuard";
+import { validateCaseInput } from "@/lib/caseInput";
 
 type ValidateBody = {
   notes?: string;
@@ -29,12 +29,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const notes = body.notes ?? "";
-  const summary = body.summary ?? "";
-  const matches = detectPhi(`${notes}\n${summary}`);
+  const validation = validateCaseInput(body);
+
+  if (!validation.ok) {
+    return NextResponse.json({
+      ok: false,
+      error: validation.error,
+      matches: validation.matches,
+    });
+  }
 
   return NextResponse.json({
-    ok: matches.length === 0,
-    matches,
+    ok: true,
+    matches: [],
   });
 }

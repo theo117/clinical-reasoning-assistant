@@ -4,19 +4,73 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { detectPhi } from "@/lib/piiGuard";
+import {
+  formatValidationError,
+  MAX_NOTES_CHARS,
+  validateCaseInput,
+} from "@/lib/caseInput";
+
+type ValidationResponse = {
+  ok: boolean;
+  error?: string;
+  matches: Array<{ label: string }>;
+};
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [notes, setNotes] = useState("");
   const [phiError, setPhiError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const notesRemaining = MAX_NOTES_CHARS - notes.length;
+  const canContinue =
+    notes.trim().length > 0 && notes.length <= MAX_NOTES_CHARS && !isValidating;
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  async function handleContinue() {
+    const localValidation = validateCaseInput({ notes });
+
+    if (!localValidation.ok) {
+      setPhiError(formatValidationError(localValidation));
+      return;
+    }
+
+    setIsValidating(true);
+    setPhiError("");
+
+    try {
+      const response = await fetch("/api/validate-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(localValidation.input),
+      });
+
+      const data = (await response.json()) as ValidationResponse;
+
+      if (!response.ok || !data.ok) {
+        const labels = data.matches?.map((match) => match.label).join(", ");
+        setPhiError(
+          labels
+            ? `${data.error ?? "Possible PHI detected."} (${labels}).`
+            : data.error ?? "Validation failed. Please retry."
+        );
+        return;
+      }
+
+      localStorage.setItem("consult_notes", localValidation.input.notes);
+      localStorage.removeItem("consult_payload");
+      router.push("/consult");
+    } catch {
+      setPhiError("Validation failed. Check your connection and retry.");
+    } finally {
+      setIsValidating(false);
+    }
+  }
 
   if (status === "loading") {
     return <div className="container-frame py-8 text-cyan-100">Loading...</div>;
@@ -80,6 +134,7 @@ export default function Dashboard() {
             }}
             placeholder="Example: 45 y/o male with exertional chest pain, diabetes, no fever, pain relieved at rest..."
             className="field-textarea min-h-55"
+            aria-describedby="notes-guidance notes-count"
           />
 
           {phiError && (
@@ -89,44 +144,28 @@ export default function Dashboard() {
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs uppercase tracking-[0.12em] text-cyan-100/65">
-              Do not include patient-identifiable details
-            </p>
+            <div className="space-y-1">
+              <p
+                id="notes-guidance"
+                className="text-xs uppercase tracking-[0.12em] text-cyan-100/65"
+              >
+                Do not include patient-identifiable details
+              </p>
+              <p
+                id="notes-count"
+                className={`text-xs ${
+                  notesRemaining < 0 ? "text-rose-100" : "text-cyan-100/60"
+                }`}
+              >
+                {notesRemaining.toLocaleString()} characters remaining
+              </p>
+            </div>
             <button
-              disabled={!notes.trim()}
-              onClick={async () => {
-                const localMatches = detectPhi(notes);
-                if (localMatches.length > 0) {
-                  const labels = localMatches.map((m) => m.label).join(", ");
-                  setPhiError(`Possible PHI detected (${labels}). Remove identifiers before continuing.`);
-                  return;
-                }
-
-                const response = await fetch("/api/validate-notes", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ notes }),
-                });
-
-                if (!response.ok) {
-                  setPhiError("Validation failed. Please retry.");
-                  return;
-                }
-
-                const data = (await response.json()) as { ok: boolean; matches: Array<{ label: string }> };
-
-                if (!data.ok) {
-                  const labels = data.matches.map((m) => m.label).join(", ");
-                  setPhiError(`Possible PHI detected (${labels}). Remove identifiers before continuing.`);
-                  return;
-                }
-
-                localStorage.setItem("consult_notes", notes);
-                router.push("/consult");
-              }}
+              disabled={!canContinue}
+              onClick={handleContinue}
               className="btn-primary px-6 py-3 disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Continue to Review
+              {isValidating ? "Checking Notes..." : "Continue to Review"}
             </button>
           </div>
         </section>
