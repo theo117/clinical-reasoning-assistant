@@ -1,24 +1,17 @@
 # Clinical Reasoning Assistant
 
-Private pilot build for early clinician feedback on a documentation-first,
-assistive clinical reasoning workflow.
+A clinician-facing, documentation-first clinical reasoning support workflow.
 
-## Pilot Focus
+The application accepts anonymized clinical notes and produces:
 
-The current prototype is strongest for these note patterns:
+- a ranked differential with concise rationale
+- red flags and suggested next checks
+- missing information to clarify
+- an editable clinical note
+- an editable referral letter
 
-- chest pain
-- respiratory symptoms
-- abdominal pain
-- neurologic symptoms
-- infection or fever
-- urinary presentations
-- back pain
-- dizziness or syncope
-
-The app is assistive only. It does not diagnose, prescribe, or replace
-clinical judgment. Testers should never enter real patient-identifiable
-information.
+The application is assistive only. It does not diagnose, prescribe, or replace
+clinical judgment. Do not enter patient-identifiable information.
 
 ## Local Setup
 
@@ -28,26 +21,26 @@ information.
 4. Set `OPENAI_API_KEY` to a server-side OpenAI project key. Never expose it
    through a `NEXT_PUBLIC_` variable or commit it to the repository.
 5. Optionally set `OPENAI_MODEL` (defaults to `gpt-5.6-terra`).
-6. Keep `OLLAMA_ENABLED=false` for remote low-spec testers unless you know they
-   have a local Ollama setup. Ollama and the built-in rule engine remain
-   fallbacks if the OpenAI request fails.
-7. Start the app with:
+6. Keep `OLLAMA_ENABLED=false` when using OpenAI.
+7. Start the app:
 
 ```bash
 npm run dev
 ```
 
-## Pilot Pages
+## Safety
 
-These routes are useful when sharing the app with family-doctor testers:
+- Authentication is handled through Clerk.
+- Clinical API routes require an authenticated Clerk session.
+- Common patient identifiers are screened before AI analysis.
+- OpenAI requests use `store: false`.
+- Consultation content is temporarily held in browser storage for the active
+  workflow and should not be used on shared devices.
 
-- `/pilot` for the tester guide and sample case prompts
-- `/feedback` for a simple structured feedback form that copies into a message
+## Verification
 
-## Suggested Test Flow
-
-1. Invite each tester to sign in with Google or a verified email address.
-2. Ask them to try 2 to 4 anonymized sample cases.
-3. Ask whether the output felt useful, what was missing, and whether they
-   would use something like this again.
-4. Collect feedback through the `/feedback` page or over WhatsApp/email.
+```bash
+npm run lint
+npm run build
+npm audit --omit=dev
+```

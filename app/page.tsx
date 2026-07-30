@@ -27,14 +27,11 @@ export default function Home() {
               <Link href="/login" className="btn-muted px-6 py-3">
                 Sign In
               </Link>
-              <Link href="/pilot" className="btn-muted px-6 py-3">
-                Pilot Guide
-              </Link>
             </div>
 
             <p className="mt-7 rounded-lg border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-              Private pilot build. Please do not enter real patient information
-              or personally identifiable data.
+              Please do not enter patient-identifiable information. Use only
+              anonymized clinical notes.
             </p>
           </article>
 
@@ -58,7 +55,7 @@ export default function Home() {
                   Privacy-aware workflow
                 </p>
                 <p className="mt-2 text-sm text-cyan-100/78">
-                  PHI checks help reinforce demo-safe usage without changing the
+                  PHI checks reinforce safer use without changing the
                   clinician-led process.
                 </p>
               </div>
@@ -75,7 +72,7 @@ export default function Home() {
 
               <div className="rounded-xl border border-amber-200/20 bg-amber-500/10 p-4">
                 <p className="text-sm font-semibold text-amber-50">
-                  Current pilot strengths
+                  Current clinical coverage
                 </p>
                 <p className="mt-2 text-sm text-amber-100/82">
                   Best tested on chest pain, respiratory, abdominal, neurologic,

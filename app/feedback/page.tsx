@@ -29,14 +29,14 @@ export default function FeedbackPage() {
   );
 
   const emailHref = useMemo(() => {
-    const subject = encodeURIComponent("Clinical Reasoning Assistant Pilot Feedback");
+    const subject = encodeURIComponent("Clinical Reasoning Assistant Feedback");
     const body = encodeURIComponent(summary);
     return `mailto:${feedbackEmail}?subject=${subject}&body=${body}`;
   }, [summary]);
 
   const whatsappHref = useMemo(() => {
     const message = encodeURIComponent(
-      `Clinical Reasoning Assistant Pilot Feedback\n\n${summary}`
+      `Clinical Reasoning Assistant Feedback\n\n${summary}`
     );
     return `https://wa.me/${whatsappNumber}?text=${message}`;
   }, [summary]);
@@ -55,7 +55,7 @@ export default function FeedbackPage() {
     <main className="min-h-screen py-10">
       <section className="container-frame space-y-6 fade-in">
         <header className="surface-card p-6 md:p-7">
-          <span className="pill mb-3">Pilot Feedback</span>
+          <span className="pill mb-3">Product Feedback</span>
           <h1 className="display-title text-3xl md:text-4xl">
             Quick Clinician Feedback
           </h1>
@@ -138,7 +138,7 @@ export default function FeedbackPage() {
           <aside className="surface-card p-6 space-y-4">
             <h2 className="display-title text-2xl">Copy And Send</h2>
             <p className="text-sm text-cyan-100/84">
-              This gives testers a simple note they can send back to you in any
+              This creates a simple note you can send through your preferred
               channel.
             </p>
 

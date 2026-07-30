@@ -10,8 +10,8 @@ export default function LoginPage() {
             Sign in securely
           </h1>
           <p className="mt-4 text-cyan-50/85">
-            Continue with Google or verify your email address. Shared pilot
-            passwords are no longer used.
+            Continue with Google or verify your email address to access the
+            clinician workspace.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-cyan-100/80">
             <li>Individual verified identity</li>

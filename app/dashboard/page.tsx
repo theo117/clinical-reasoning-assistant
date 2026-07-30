@@ -122,11 +122,8 @@ export default function Dashboard() {
               request is made.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/pilot" className="btn-muted px-4 py-2 text-sm">
-                View Tester Guide
-              </Link>
               <Link href="/feedback" className="btn-muted px-4 py-2 text-sm">
-                Open Feedback Form
+                Send Feedback
               </Link>
             </div>
           </div>

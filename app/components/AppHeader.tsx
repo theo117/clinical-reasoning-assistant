@@ -6,7 +6,6 @@ import { useAuth, UserButton } from "@clerk/nextjs";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/pilot", label: "Pilot Guide" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/feedback", label: "Feedback" },
 ];
@@ -19,7 +18,7 @@ export default function AppHeader() {
     <header className="sticky top-0 z-40 border-b border-cyan-200/10 bg-[rgba(4,18,24,0.82)] backdrop-blur-xl">
       <div className="container-frame flex items-center justify-between gap-3 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-3">
-          <span className="pill hidden sm:inline-flex">Private Pilot</span>
+          <span className="pill hidden sm:inline-flex">Clinician Workspace</span>
           <span className="display-title text-lg text-cyan-50">
             Clinical Reasoning Assistant
           </span>
