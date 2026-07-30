@@ -16,15 +16,15 @@ export default function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-cyan-200/10 bg-[rgba(4,18,24,0.82)] backdrop-blur-xl">
-      <div className="container-frame flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="container-frame flex items-center justify-between gap-3 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-3">
-          <span className="pill">Private Pilot</span>
+          <span className="pill hidden sm:inline-flex">Private Pilot</span>
           <span className="display-title text-lg text-cyan-50">
             Clinical Reasoning Assistant
           </span>
         </Link>
 
-        <nav className="flex flex-wrap gap-2">
+        <nav className="hidden flex-wrap gap-2 md:flex">
           {navItems.map((item) => {
             const isActive =
               item.href === "/"

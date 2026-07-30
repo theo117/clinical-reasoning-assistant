@@ -1,9 +1,19 @@
 export type ClinicalAnalysis = {
+  clinicalSummary: string;
   possibleConsiderations: string[];
+  differential: Array<{
+    condition: string;
+    rationale: string;
+    priority: "high" | "medium" | "low";
+  }>;
   suggestedChecks: string[];
   redFlags: string[];
   lessLikely: string[];
+  missingInformation: string[];
   detectedSignals: string[];
+  reasoningNarrative: string;
+  clinicalNote: string;
+  referralLetter: string;
   safetyNote: string;
 };
 
@@ -341,9 +351,11 @@ export function analyzeClinicalNotes(input: {
 
   if (!combinedText) {
     return {
+      clinicalSummary: "Insufficient clinical information was supplied.",
       possibleConsiderations: [
         "Insufficient information for rule-based analysis",
       ],
+      differential: [],
       suggestedChecks: [
         "Add symptom details, onset, negatives, and risk factors",
       ],
@@ -353,7 +365,15 @@ export function analyzeClinicalNotes(input: {
       lessLikely: [
         "No lower-probability conditions inferred from the current text",
       ],
+      missingInformation: [
+        "Presenting complaint, onset, severity, relevant history, examination, and vital signs",
+      ],
       detectedSignals: ["No clinical content detected"],
+      reasoningNarrative:
+        "The available information is insufficient to construct a meaningful clinical reasoning pathway.",
+      clinicalNote: "Clinical note\n\nInsufficient information documented.",
+      referralLetter:
+        "Referral letter\n\nInsufficient information is available to prepare a referral.",
       safetyNote:
         "Rule-based support only. Output depends entirely on the clinician-authored text provided.",
     };
@@ -417,11 +437,46 @@ export function analyzeClinicalNotes(input: {
   }
 
   return {
+    clinicalSummary: combinedText.slice(0, 700),
     possibleConsiderations: unique(possibleConsiderations).slice(0, 5),
+    differential: unique(possibleConsiderations)
+      .slice(0, 5)
+      .map((condition, index) => ({
+        condition,
+        rationale:
+          "Rule-based consideration triggered by features in the clinician-authored notes; correlate with history and examination.",
+        priority: index === 0 ? "high" : index < 3 ? "medium" : "low",
+      })),
     suggestedChecks: unique(suggestedChecks).slice(0, 6),
     redFlags: unique(redFlags).slice(0, 6),
     lessLikely: unique(lessLikely).slice(0, 4),
+    missingInformation: [
+      "Confirm onset, duration, severity, progression, and associated symptoms",
+      "Document relevant vital signs, examination findings, comorbidities, medicines, and key negatives",
+    ],
     detectedSignals: unique(detectedSignals).slice(0, 6),
+    reasoningNarrative:
+      "The built-in rules matched the documented presentation to a limited set of clinical patterns. Review the listed time-critical possibilities first, then use targeted history, examination, and investigations to refine the differential.",
+    clinicalNote: [
+      "Clinical note",
+      "",
+      combinedText,
+      "",
+      `Assessment considerations: ${unique(possibleConsiderations).slice(0, 5).join("; ")}.`,
+      `Suggested next steps: ${unique(suggestedChecks).slice(0, 6).join("; ")}.`,
+    ].join("\n"),
+    referralLetter: [
+      "Dear Colleague,",
+      "",
+      "Please assess this patient based on the following anonymized clinical summary:",
+      combinedText,
+      "",
+      `Key considerations: ${unique(possibleConsiderations).slice(0, 5).join("; ")}.`,
+      `Red flags to review: ${unique(redFlags).slice(0, 6).join("; ")}.`,
+      "",
+      "Kind regards,",
+      "Referring clinician",
+    ].join("\n"),
     safetyNote:
       "Rule-based support only. This prototype is strongest for a limited set of presentation patterns and does not diagnose, prescribe, or replace clinical judgment.",
   };

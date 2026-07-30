@@ -87,6 +87,7 @@ body {
 }
 
 .btn-primary {
+  min-height: 44px;
   border-radius: 0.8rem;
   background: linear-gradient(135deg, var(--accent), #1eaeb4);
   color: #032327;
@@ -100,6 +101,7 @@ body {
 }
 
 .btn-muted {
+  min-height: 44px;
   border-radius: 0.8rem;
   border: 1px solid rgba(189, 212, 219, 0.35);
   background: rgba(9, 31, 39, 0.88);
@@ -120,6 +122,34 @@ body {
   background: rgba(6, 24, 30, 0.85);
   color: var(--text-100);
   transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.priority-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.priority-high {
+  border: 1px solid rgba(253, 164, 175, 0.5);
+  background: rgba(244, 63, 94, 0.15);
+  color: #fecdd3;
+}
+
+.priority-medium {
+  border: 1px solid rgba(252, 211, 77, 0.45);
+  background: rgba(245, 158, 11, 0.13);
+  color: #fde68a;
+}
+
+.priority-low {
+  border: 1px solid rgba(110, 231, 183, 0.4);
+  background: rgba(16, 185, 129, 0.12);
+  color: #a7f3d0;
 }
 
 .field {
@@ -162,5 +192,14 @@ body {
 @media (max-width: 768px) {
   .container-frame {
     width: calc(100% - 1.25rem);
+  }
+
+  .surface-card,
+  .surface-card-strong {
+    border-radius: 0.85rem;
+  }
+
+  .field-textarea {
+    font-size: 16px;
   }
 }

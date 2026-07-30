@@ -25,9 +25,13 @@ information.
 1. Copy `.env.example` values into `.env.local`.
 2. Set a strong `NEXTAUTH_SECRET`.
 3. Add one or more invited pilot accounts to `PILOT_DOCTOR_ACCOUNTS`.
-4. Keep `OLLAMA_ENABLED=false` for remote low-spec testers unless you know they
-   have a local Ollama setup.
-5. Start the app with:
+4. Set `OPENAI_API_KEY` to a server-side OpenAI project key. Never expose it
+   through a `NEXT_PUBLIC_` variable or commit it to the repository.
+5. Optionally set `OPENAI_MODEL` (defaults to `gpt-5.6-terra`).
+6. Keep `OLLAMA_ENABLED=false` for remote low-spec testers unless you know they
+   have a local Ollama setup. Ollama and the built-in rule engine remain
+   fallbacks if the OpenAI request fails.
+7. Start the app with:
 
 ```bash
 npm run dev

@@ -63,8 +63,11 @@ export default function Dashboard() {
       }
 
       localStorage.setItem("consult_notes", localValidation.input.notes);
-      localStorage.removeItem("consult_payload");
-      router.push("/consult");
+      localStorage.setItem(
+        "consult_payload",
+        JSON.stringify(localValidation.input)
+      );
+      router.push("/results");
     } catch {
       setPhiError("Validation failed. Check your connection and retry.");
     } finally {
@@ -77,7 +80,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen py-10">
+    <main className="min-h-screen py-5 md:py-10">
       <section className="container-frame space-y-6 fade-in">
         <header className="surface-card p-6 md:p-7 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
@@ -103,16 +106,16 @@ export default function Dashboard() {
             Consultation Reasoning Notes
           </h2>
           <p className="text-sm text-cyan-100/80">
-            Capture relevant symptoms, risk factors, exclusions, and timeline.
-            This content remains clinician-authored and assistive.
+            Paste anonymized consultation notes. You will get an explainable
+            differential, next steps, and editable documentation drafts.
           </p>
 
           <div className="rounded-xl border border-amber-300/35 bg-amber-400/10 p-4 text-sm text-amber-100">
-            <p className="font-semibold text-amber-50">Pilot coverage guidance</p>
+            <p className="font-semibold text-amber-50">Keep the patient anonymous</p>
             <p className="mt-2 text-amber-100/90">
-              This prototype is currently strongest on chest pain, respiratory,
-              abdominal, neurologic, infection, urinary, back pain, and
-              dizziness or syncope presentations.
+              Remove names, contact details, record numbers, addresses, and
+              dates of birth. The app screens common identifiers before any AI
+              request is made.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link href="/pilot" className="btn-muted px-4 py-2 text-sm">
@@ -132,8 +135,8 @@ export default function Dashboard() {
                 setPhiError("");
               }
             }}
-            placeholder="Example: 45 y/o male with exertional chest pain, diabetes, no fever, pain relieved at rest..."
-            className="field-textarea min-h-55"
+            placeholder={"Example:\nPresenting complaint and timeline...\nRelevant positives and negatives...\nVitals and examination...\nHistory, medicines, allergies and risk factors..."}
+            className="field-textarea min-h-70"
             aria-describedby="notes-guidance notes-count"
           />
 
@@ -165,7 +168,7 @@ export default function Dashboard() {
               onClick={handleContinue}
               className="btn-primary px-6 py-3 disabled:cursor-not-allowed disabled:opacity-55"
             >
-              {isValidating ? "Checking Notes..." : "Continue to Review"}
+              {isValidating ? "Checking Notes..." : "Analyze Case"}
             </button>
           </div>
         </section>

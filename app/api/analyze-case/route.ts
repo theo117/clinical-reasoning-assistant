@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { analyzeClinicalNotes } from "@/lib/clinicalEngine";
 import { analyzeWithOllama, isOllamaEnabled } from "@/lib/ollama";
+import { analyzeWithOpenAI, isOpenAIEnabled } from "@/lib/openai";
 import { validateCaseInput } from "@/lib/caseInput";
 
 type AnalyzeBody = {
@@ -45,6 +46,21 @@ export async function POST(req: Request) {
   }
 
   const { notes, summary } = validation.input;
+
+  if (isOpenAIEnabled()) {
+    try {
+      const openAIResult = await analyzeWithOpenAI({ notes, summary });
+
+      return NextResponse.json({
+        ok: true,
+        analysis: openAIResult.analysis,
+        provider: "openai",
+        model: openAIResult.model,
+      });
+    } catch (error) {
+      console.error("OpenAI analysis failed, trying configured fallbacks.", error);
+    }
+  }
 
   if (isOllamaEnabled()) {
     try {

@@ -105,9 +105,38 @@ export function normalizeClinicalAnalysis(payload: unknown): ClinicalAnalysis {
       : {};
 
   return {
+    clinicalSummary:
+      typeof record.clinicalSummary === "string" && record.clinicalSummary.trim()
+        ? record.clinicalSummary.trim()
+        : "Clinical summary was not generated.",
     possibleConsiderations: toStringArray(record.possibleConsiderations, [
       "Broad differential requires clinician correlation",
     ]).slice(0, 5),
+    differential: Array.isArray(record.differential)
+      ? record.differential
+          .filter(
+            (entry): entry is Record<string, unknown> =>
+              Boolean(entry) && typeof entry === "object"
+          )
+          .map((entry) => ({
+            condition:
+              typeof entry.condition === "string"
+                ? entry.condition.trim()
+                : "Unspecified consideration",
+            rationale:
+              typeof entry.rationale === "string"
+                ? entry.rationale.trim()
+                : "Requires clinician correlation.",
+            priority: (
+              entry.priority === "high" ||
+              entry.priority === "medium" ||
+              entry.priority === "low"
+                ? entry.priority
+                : "medium"
+            ) as "high" | "medium" | "low",
+          }))
+          .slice(0, 8)
+      : [],
     suggestedChecks: toStringArray(record.suggestedChecks, [
       "Clarify onset, severity, associated symptoms, and key negatives",
     ]).slice(0, 6),
@@ -117,9 +146,25 @@ export function normalizeClinicalAnalysis(payload: unknown): ClinicalAnalysis {
     lessLikely: toStringArray(record.lessLikely, [
       "Conditions without supporting features in the current notes",
     ]).slice(0, 4),
+    missingInformation: toStringArray(record.missingInformation, [
+      "Clarify relevant history, examination findings, vital signs, and key negatives",
+    ]).slice(0, 8),
     detectedSignals: toStringArray(record.detectedSignals, [
       "Structured clinical text reviewed",
     ]).slice(0, 6),
+    reasoningNarrative:
+      typeof record.reasoningNarrative === "string" &&
+      record.reasoningNarrative.trim()
+        ? record.reasoningNarrative.trim()
+        : "Review the documented features against the differential and resolve missing information before deciding next steps.",
+    clinicalNote:
+      typeof record.clinicalNote === "string" && record.clinicalNote.trim()
+        ? record.clinicalNote.trim()
+        : "Clinical note draft was not generated.",
+    referralLetter:
+      typeof record.referralLetter === "string" && record.referralLetter.trim()
+        ? record.referralLetter.trim()
+        : "Referral letter draft was not generated.",
     safetyNote:
       typeof record.safetyNote === "string" && record.safetyNote.trim()
         ? record.safetyNote.trim()
