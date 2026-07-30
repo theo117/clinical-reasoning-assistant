@@ -1,8 +1,15 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
+type CsrfResponse = {
+  csrfToken?: string;
+};
+
+type CredentialsResponse = {
+  url?: string;
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,25 +51,75 @@ export default function LoginPage() {
           </aside>
 
           <form
+            autoComplete="off"
             onSubmit={async (e) => {
               e.preventDefault();
               setError("");
               setIsSubmitting(true);
 
-              const result = await signIn("credentials", {
-                email,
-                password,
-                redirect: false,
-              });
+              try {
+                const csrfResponse = await fetch("/api/auth/csrf", {
+                  cache: "no-store",
+                });
+                const csrf = (await csrfResponse.json()) as CsrfResponse;
 
-              setIsSubmitting(false);
+                if (!csrfResponse.ok || !csrf.csrfToken) {
+                  throw new Error("Could not initialize a secure sign-in.");
+                }
 
-              if (result?.ok) {
-                router.push("/dashboard");
-                return;
+                const formData = new URLSearchParams({
+                  csrfToken: csrf.csrfToken,
+                  email: email.trim(),
+                  password,
+                  json: "true",
+                });
+
+                const authResponse = await fetch(
+                  "/api/auth/callback/credentials",
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: formData,
+                  }
+                );
+                const authResult =
+                  (await authResponse.json()) as CredentialsResponse;
+                const signInFailed =
+                  !authResponse.ok ||
+                  authResult.url?.includes("/api/auth/error") ||
+                  authResult.url?.includes("error=");
+
+                if (signInFailed) {
+                  setError(
+                    "Sign-in failed. Check the email and password exactly, then retry."
+                  );
+                  return;
+                }
+
+                const sessionResponse = await fetch("/api/auth/session", {
+                  cache: "no-store",
+                });
+                const session = (await sessionResponse.json()) as {
+                  user?: { email?: string };
+                };
+
+                if (!session.user?.email) {
+                  throw new Error("The sign-in completed but no session was created.");
+                }
+
+                router.replace("/dashboard");
+                router.refresh();
+              } catch (signInError) {
+                setError(
+                  signInError instanceof Error
+                    ? signInError.message
+                    : "Sign-in could not be completed. Please retry."
+                );
+              } finally {
+                setIsSubmitting(false);
               }
-
-              setError("Sign-in failed. Use an invited pilot account and retry.");
             }}
             className="surface-card p-7 space-y-4"
           >
@@ -74,6 +131,8 @@ export default function LoginPage() {
               <span className="text-sm text-cyan-50/90">Email</span>
               <input
                 type="email"
+                name="pilot-email"
+                autoComplete="off"
                 placeholder="doctor@clinic.com"
                 className="field"
                 value={email}
@@ -86,6 +145,8 @@ export default function LoginPage() {
               <span className="text-sm text-cyan-50/90">Password</span>
               <input
                 type="password"
+                name="pilot-password"
+                autoComplete="new-password"
                 placeholder="Enter password"
                 className="field"
                 value={password}
