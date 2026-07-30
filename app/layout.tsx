@@ -1,6 +1,6 @@
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 import AppHeader from "./components/AppHeader";
-import Providers from "./components/Providers";
 
 export default function RootLayout({
   children,
@@ -10,7 +10,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="app-shell min-h-screen text-gray-100 antialiased">
-        <Providers>
+        <ClerkProvider>
           <AppHeader />
           {children}
           <footer className="border-t border-cyan-200/10 bg-[rgba(4,18,24,0.62)]">
@@ -18,7 +18,7 @@ export default function RootLayout({
               powered by teodor dev tech
             </div>
           </footer>
-        </Providers>
+        </ClerkProvider>
       </body>
     </html>
   );

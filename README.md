@@ -23,8 +23,8 @@ information.
 ## Local Setup
 
 1. Copy `.env.example` values into `.env.local`.
-2. Set a strong `NEXTAUTH_SECRET`.
-3. Add one or more invited pilot accounts to `PILOT_DOCTOR_ACCOUNTS`.
+2. Create a Clerk application and configure Google and email verification.
+3. Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
 4. Set `OPENAI_API_KEY` to a server-side OpenAI project key. Never expose it
    through a `NEXT_PUBLIC_` variable or commit it to the repository.
 5. Optionally set `OPENAI_MODEL` (defaults to `gpt-5.6-terra`).
@@ -46,7 +46,7 @@ These routes are useful when sharing the app with family-doctor testers:
 
 ## Suggested Test Flow
 
-1. Give each tester private login credentials.
+1. Invite each tester to sign in with Google or a verified email address.
 2. Ask them to try 2 to 4 anonymized sample cases.
 3. Ask whether the output felt useful, what was missing, and whether they
    would use something like this again.

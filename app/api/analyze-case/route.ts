@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { analyzeClinicalNotes } from "@/lib/clinicalEngine";
 import { analyzeWithOllama, isOllamaEnabled } from "@/lib/ollama";
 import { analyzeWithOpenAI, isOpenAIEnabled } from "@/lib/openai";
@@ -12,9 +11,9 @@ type AnalyzeBody = {
 };
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const { userId } = await auth();
 
-  if (!session) {
+  if (!userId) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401 }

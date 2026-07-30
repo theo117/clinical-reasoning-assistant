@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth, UserButton } from "@clerk/nextjs";
 
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/pilot", label: "Pilot Guide" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/feedback", label: "Feedback" },
-  { href: "/login", label: "Sign In" },
 ];
 
 export default function AppHeader() {
   const pathname = usePathname();
+  const { isLoaded, isSignedIn } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-cyan-200/10 bg-[rgba(4,18,24,0.82)] backdrop-blur-xl">
@@ -46,6 +47,12 @@ export default function AppHeader() {
               </Link>
             );
           })}
+          {isLoaded && !isSignedIn ? (
+            <Link href="/login" className="rounded-full px-4 py-2 text-sm text-cyan-100/75 hover:bg-cyan-400/10 hover:text-cyan-50">
+              Sign In
+            </Link>
+          ) : null}
+          {isLoaded && isSignedIn ? <UserButton /> : null}
         </nav>
       </div>
     </header>

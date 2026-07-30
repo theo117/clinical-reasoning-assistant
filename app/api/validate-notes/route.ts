@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { validateCaseInput } from "@/lib/caseInput";
 
 type ValidateBody = {
@@ -9,9 +8,9 @@ type ValidateBody = {
 };
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const { userId } = await auth();
 
-  if (!session) {
+  if (!userId) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401 }

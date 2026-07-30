@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -17,7 +17,8 @@ type ValidationResponse = {
 };
 
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { signOut } = useClerk();
   const router = useRouter();
   const [notes, setNotes] = useState("");
   const [phiError, setPhiError] = useState("");
@@ -27,10 +28,10 @@ export default function Dashboard() {
     notes.trim().length > 0 && notes.length <= MAX_NOTES_CHARS && !isValidating;
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/login");
     }
-  }, [status, router]);
+  }, [isLoaded, isSignedIn, router]);
 
   async function handleContinue() {
     const localValidation = validateCaseInput({ notes });
@@ -75,7 +76,7 @@ export default function Dashboard() {
     }
   }
 
-  if (status === "loading") {
+  if (!isLoaded) {
     return <div className="container-frame py-8 text-cyan-100">Loading...</div>;
   }
 
@@ -89,12 +90,15 @@ export default function Dashboard() {
               Doctor Dashboard
             </h1>
             <p className="mt-3 text-cyan-50/80">
-              Welcome back, {session?.user?.email}
+              Welcome back, {user?.primaryEmailAddress?.emailAddress ?? "clinician"}
             </p>
           </div>
 
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              await signOut();
+              router.push("/login");
+            }}
             className="btn-muted px-4 py-2 text-sm"
           >
             Logout

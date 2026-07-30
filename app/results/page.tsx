@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@clerk/nextjs";
 
 type ConsultPayload = {
   notes: string;
@@ -108,7 +108,7 @@ function DraftEditor({
 }
 
 export default function ResultsPage() {
-  const { status } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const [analysis, setAnalysis] = useState<ClinicalAnalysis | null>(null);
   const [provider, setProvider] = useState<AnalysisProvider | null>(null);
@@ -166,12 +166,12 @@ export default function ResultsPage() {
   }, [payload]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/login");
     } else if (!payload) {
       router.push("/dashboard");
     }
-  }, [status, router, payload]);
+  }, [isLoaded, isSignedIn, router, payload]);
 
   function handleStartNew() {
     localStorage.removeItem("consult_notes");
@@ -179,7 +179,7 @@ export default function ResultsPage() {
     router.push("/dashboard");
   }
 
-  if (status === "loading" || !payload || (!analysis && !error)) {
+  if (!isLoaded || !payload || (!analysis && !error)) {
     return (
       <main className="container-frame flex min-h-[70vh] items-center justify-center py-8">
         <div className="surface-card w-full max-w-lg p-8 text-center">
