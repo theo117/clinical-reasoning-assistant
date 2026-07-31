@@ -4,6 +4,7 @@ const protectedPagePrefixes = [
   "/dashboard",
   "/consult",
   "/results",
+  "/calculators",
 ];
 
 export default clerkMiddleware(async (auth, request) => {

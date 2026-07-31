@@ -8,6 +8,8 @@ import { validateCaseInput } from "@/lib/caseInput";
 type AnalyzeBody = {
   notes?: string;
   summary?: string;
+  followUp?: string;
+  referralSpecialty?: string;
 };
 
 export async function POST(req: Request) {
@@ -44,11 +46,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const { notes, summary } = validation.input;
+  const { notes, summary, followUp, referralSpecialty } = validation.input;
 
   if (isOpenAIEnabled()) {
     try {
-      const openAIResult = await analyzeWithOpenAI({ notes, summary });
+      const openAIResult = await analyzeWithOpenAI({
+        notes,
+        summary,
+        followUp,
+        referralSpecialty,
+        safetyIdentifier: userId,
+      });
 
       return NextResponse.json({
         ok: true,
@@ -63,7 +71,7 @@ export async function POST(req: Request) {
 
   if (isOllamaEnabled()) {
     try {
-      const ollamaResult = await analyzeWithOllama({ notes, summary });
+      const ollamaResult = await analyzeWithOllama({ notes, summary, followUp });
 
       return NextResponse.json({
         ok: true,
@@ -78,7 +86,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    analysis: analyzeClinicalNotes({ notes, summary }),
+    analysis: analyzeClinicalNotes({ notes, summary, followUp }),
     provider: "rules",
     model: "built-in-rules",
   });

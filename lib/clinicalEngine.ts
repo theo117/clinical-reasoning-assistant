@@ -12,8 +12,24 @@ export type ClinicalAnalysis = {
   missingInformation: string[];
   detectedSignals: string[];
   reasoningNarrative: string;
+  urgency: {
+    level: "emergency" | "urgent" | "soon" | "routine" | "monitor";
+    timeframe: string;
+    rationale: string;
+  };
+  nextBestActions: string[];
+  guidelineReferences: Array<{
+    title: string;
+    organization: string;
+    year: string;
+    url: string;
+    relevance: string;
+  }>;
   clinicalNote: string;
+  soapNote: string;
   referralLetter: string;
+  workNote: string;
+  medicationSafetyNote: string;
   safetyNote: string;
 };
 
@@ -346,8 +362,9 @@ function scoreRules(text: string): RuleSet[] {
 export function analyzeClinicalNotes(input: {
   notes?: string;
   summary?: string;
+  followUp?: string;
 }): ClinicalAnalysis {
-  const combinedText = `${input.notes ?? ""}\n${input.summary ?? ""}`.trim();
+  const combinedText = `${input.notes ?? ""}\n${input.summary ?? ""}\n${input.followUp ?? ""}`.trim();
 
   if (!combinedText) {
     return {
@@ -371,9 +388,21 @@ export function analyzeClinicalNotes(input: {
       detectedSignals: ["No clinical content detected"],
       reasoningNarrative:
         "The available information is insufficient to construct a meaningful clinical reasoning pathway.",
+      urgency: {
+        level: "urgent",
+        timeframe: "Clinical review required before urgency can be determined",
+        rationale: "Insufficient information is available to safely classify urgency.",
+      },
+      nextBestActions: ["Add sufficient clinical history and objective findings"],
+      guidelineReferences: [],
       clinicalNote: "Clinical note\n\nInsufficient information documented.",
+      soapNote: "SOAP note\n\nS: [not provided]\nO: [not provided]\nA: Insufficient information\nP: Obtain clinical information.",
       referralLetter:
         "Referral letter\n\nInsufficient information is available to prepare a referral.",
+      workNote:
+        "Work note\n\nA clinical attendance occurred. Functional recommendations were not provided.",
+      medicationSafetyNote:
+        "No medication dose should be calculated from insufficient information.",
       safetyNote:
         "Rule-based support only. Output depends entirely on the clinician-authored text provided.",
     };
@@ -457,6 +486,17 @@ export function analyzeClinicalNotes(input: {
     detectedSignals: unique(detectedSignals).slice(0, 6),
     reasoningNarrative:
       "The built-in rules matched the documented presentation to a limited set of clinical patterns. Review the listed time-critical possibilities first, then use targeted history, examination, and investigations to refine the differential.",
+    urgency: {
+      level: redFlags.length > 2 ? "urgent" : "routine",
+      timeframe:
+        redFlags.length > 2
+          ? "Prompt same-day clinical review if the listed red flags are present"
+          : "Timing depends on clinical findings and patient stability",
+      rationale:
+        "Rule-based urgency is provisional and must be confirmed against the patient's current physiology and examination.",
+    },
+    nextBestActions: unique(suggestedChecks).slice(0, 4),
+    guidelineReferences: [],
     clinicalNote: [
       "Clinical note",
       "",
@@ -464,6 +504,14 @@ export function analyzeClinicalNotes(input: {
       "",
       `Assessment considerations: ${unique(possibleConsiderations).slice(0, 5).join("; ")}.`,
       `Suggested next steps: ${unique(suggestedChecks).slice(0, 6).join("; ")}.`,
+    ].join("\n"),
+    soapNote: [
+      "SOAP note",
+      "",
+      `S: ${combinedText}`,
+      "O: [objective findings not separately provided]",
+      `A: ${unique(possibleConsiderations).slice(0, 5).join("; ")}.`,
+      `P: ${unique(suggestedChecks).slice(0, 6).join("; ")}.`,
     ].join("\n"),
     referralLetter: [
       "Dear Colleague,",
@@ -477,6 +525,16 @@ export function analyzeClinicalNotes(input: {
       "Kind regards,",
       "Referring clinician",
     ].join("\n"),
+    workNote: [
+      "To whom it may concern,",
+      "",
+      "This confirms that the individual attended a clinical consultation.",
+      "Any work restrictions or dates should be completed by the treating clinician.",
+      "",
+      "No diagnosis or unnecessary clinical detail is included in this note.",
+    ].join("\n"),
+    medicationSafetyNote:
+      "Medication selection and dosing require a verified medicine-specific protocol, patient factors, contraindication review, and clinician confirmation. Do not use the rule fallback to determine a dose.",
     safetyNote:
       "Rule-based support only. This prototype is strongest for a limited set of presentation patterns and does not diagnose, prescribe, or replace clinical judgment.",
   };

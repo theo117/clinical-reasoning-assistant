@@ -5,6 +5,8 @@ import { validateCaseInput } from "@/lib/caseInput";
 type ValidateBody = {
   notes?: string;
   summary?: string;
+  followUp?: string;
+  referralSpecialty?: string;
 };
 
 export async function POST(req: Request) {

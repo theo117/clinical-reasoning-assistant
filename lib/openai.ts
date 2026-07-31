@@ -46,6 +46,9 @@ function readOutputText(payload: OpenAIResponse): string {
 export async function analyzeWithOpenAI(input: {
   notes?: string;
   summary?: string;
+  followUp?: string;
+  referralSpecialty?: string;
+  safetyIdentifier?: string;
 }): Promise<OpenAIAnalysisResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -55,10 +58,12 @@ export async function analyzeWithOpenAI(input: {
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
   const notes = input.notes?.trim() ?? "";
   const summary = input.summary?.trim() ?? "";
+  const followUp = input.followUp?.trim() ?? "";
+  const referralSpecialty = input.referralSpecialty?.trim() ?? "General specialist";
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    Number(process.env.OPENAI_TIMEOUT_MS ?? "60000")
+    Number(process.env.OPENAI_TIMEOUT_MS ?? "90000")
   );
 
   try {
@@ -72,6 +77,8 @@ export async function analyzeWithOpenAI(input: {
       body: JSON.stringify({
         model,
         store: false,
+        safety_identifier: input.safetyIdentifier,
+        tools: [{ type: "web_search", search_context_size: "low" }],
         reasoning: { effort: "medium" },
         text: {
           verbosity: "medium",
@@ -119,8 +126,43 @@ export async function analyzeWithOpenAI(input: {
                   items: { type: "string" },
                 },
                 reasoningNarrative: { type: "string" },
+                urgency: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    level: {
+                      type: "string",
+                      enum: ["emergency", "urgent", "soon", "routine", "monitor"],
+                    },
+                    timeframe: { type: "string" },
+                    rationale: { type: "string" },
+                  },
+                  required: ["level", "timeframe", "rationale"],
+                },
+                nextBestActions: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+                guidelineReferences: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      title: { type: "string" },
+                      organization: { type: "string" },
+                      year: { type: "string" },
+                      url: { type: "string" },
+                      relevance: { type: "string" },
+                    },
+                    required: ["title", "organization", "year", "url", "relevance"],
+                  },
+                },
                 clinicalNote: { type: "string" },
+                soapNote: { type: "string" },
                 referralLetter: { type: "string" },
+                workNote: { type: "string" },
+                medicationSafetyNote: { type: "string" },
                 safetyNote: { type: "string" },
               },
               required: [
@@ -133,8 +175,14 @@ export async function analyzeWithOpenAI(input: {
                 "missingInformation",
                 "detectedSignals",
                 "reasoningNarrative",
+                "urgency",
+                "nextBestActions",
+                "guidelineReferences",
                 "clinicalNote",
+                "soapNote",
                 "referralLetter",
+                "workNote",
+                "medicationSafetyNote",
                 "safetyNote",
               ],
             },
@@ -147,8 +195,14 @@ export async function analyzeWithOpenAI(input: {
           "Expose useful reasoning as a concise clinical rationale, not hidden chain-of-thought.",
           "Rank a broad but relevant differential, explicitly connecting each item to supporting or missing features.",
           "Separate time-critical red flags from routine next steps.",
-          "Clinical notes and referral letters must be editable drafts. Mark missing facts with [not provided], never fabricate them.",
+          "Calibrate urgency. Do not recommend emergency referral unless supplied features justify it; clearly state what would change the urgency.",
+          "Use web search to find up to 5 current, authoritative guideline sources relevant to this case. Prefer South African national/provincial guidance, WHO, NICE, and specialty societies. Include only sources you actually found; use the canonical URL and publication/update year. If no reliable source is found, return an empty list.",
+          "Clinical, SOAP, referral, and work-note outputs must be editable drafts. Mark missing facts with [not provided], never fabricate them.",
+          "The SOAP note must have explicit S, O, A, and P headings.",
+          `Address the referral draft to ${referralSpecialty}.`,
+          "The work note must preserve privacy: confirm attendance and functional restrictions only, omitting diagnosis unless explicitly necessary and supplied.",
           "Do not give drug doses or definitive treatment instructions.",
+          "The medication safety note must direct clinicians to a verified medicine-specific protocol and independent dose confirmation.",
           "If the patient may be unstable, lead with urgent escalation.",
           "Use clear professional English suitable for a South African primary-care context.",
         ].join("\n"),
@@ -156,6 +210,8 @@ export async function analyzeWithOpenAI(input: {
           "Create clinical reasoning support and documentation drafts from this anonymized clinician-authored case.",
           `Raw notes:\n${notes || "[not provided]"}`,
           `Optional structured summary:\n${summary || "[not provided]"}`,
+          `Follow-up results and interval change:\n${followUp || "[no follow-up supplied]"}`,
+          `Requested referral destination:\n${referralSpecialty}`,
         ].join("\n\n"),
       }),
     });

@@ -2,10 +2,13 @@ import { detectPhi, type PhiMatch } from "@/lib/piiGuard";
 
 export const MAX_NOTES_CHARS = 6000;
 export const MAX_SUMMARY_CHARS = 3000;
+export const MAX_FOLLOW_UP_CHARS = 4000;
 
 export type CaseInput = {
   notes: string;
   summary: string;
+  followUp: string;
+  referralSpecialty: string;
 };
 
 export type CaseInputValidation =
@@ -27,20 +30,26 @@ function normalizeText(value: unknown): string {
 export function normalizeCaseInput(input: {
   notes?: unknown;
   summary?: unknown;
+  followUp?: unknown;
+  referralSpecialty?: unknown;
 }): CaseInput {
   return {
     notes: normalizeText(input.notes),
     summary: normalizeText(input.summary),
+    followUp: normalizeText(input.followUp),
+    referralSpecialty: normalizeText(input.referralSpecialty).slice(0, 80),
   };
 }
 
 export function validateCaseInput(input: {
   notes?: unknown;
   summary?: unknown;
+  followUp?: unknown;
+  referralSpecialty?: unknown;
 }): CaseInputValidation {
   const normalized = normalizeCaseInput(input);
 
-  if (!normalized.notes && !normalized.summary) {
+  if (!normalized.notes && !normalized.summary && !normalized.followUp) {
     return {
       ok: false,
       error: "Add anonymized clinical notes before requesting analysis.",
@@ -64,7 +73,17 @@ export function validateCaseInput(input: {
     };
   }
 
-  const matches = detectPhi(`${normalized.notes}\n${normalized.summary}`);
+  if (normalized.followUp.length > MAX_FOLLOW_UP_CHARS) {
+    return {
+      ok: false,
+      error: `Follow-up results are too long. Keep them under ${MAX_FOLLOW_UP_CHARS.toLocaleString()} characters.`,
+      matches: [],
+    };
+  }
+
+  const matches = detectPhi(
+    `${normalized.notes}\n${normalized.summary}\n${normalized.followUp}`
+  );
 
   if (matches.length > 0) {
     return {

@@ -3,10 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { loadSavedCases, saveClinicalCase } from "@/lib/caseStorage";
 
 type ConsultPayload = {
   notes: string;
   summary: string;
+  followUp: string;
+  referralSpecialty: string;
+  caseId?: string;
+  caseLabel?: string;
 };
 
 type DifferentialItem = {
@@ -25,8 +30,24 @@ type ClinicalAnalysis = {
   missingInformation: string[];
   detectedSignals: string[];
   reasoningNarrative: string;
+  urgency: {
+    level: "emergency" | "urgent" | "soon" | "routine" | "monitor";
+    timeframe: string;
+    rationale: string;
+  };
+  nextBestActions: string[];
+  guidelineReferences: Array<{
+    title: string;
+    organization: string;
+    year: string;
+    url: string;
+    relevance: string;
+  }>;
   clinicalNote: string;
+  soapNote: string;
   referralLetter: string;
+  workNote: string;
+  medicationSafetyNote: string;
   safetyNote: string;
 };
 
@@ -41,6 +62,15 @@ async function readAnalysisResponse(response: Response): Promise<AnalysisRespons
     return (await response.json()) as AnalysisResponse;
   } catch {
     return { ok: false, error: "Analysis returned an unreadable response." };
+  }
+}
+
+function safeHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -108,14 +138,16 @@ function DraftEditor({
 }
 
 export default function ResultsPage() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const router = useRouter();
   const [analysis, setAnalysis] = useState<ClinicalAnalysis | null>(null);
   const [provider, setProvider] = useState<AnalysisProvider | null>(null);
   const [modelName, setModelName] = useState("");
   const [error, setError] = useState("");
   const [clinicalNote, setClinicalNote] = useState("");
+  const [soapNote, setSoapNote] = useState("");
   const [referralLetter, setReferralLetter] = useState("");
+  const [workNote, setWorkNote] = useState("");
 
   const payload = useMemo<ConsultPayload | null>(() => {
     if (typeof window === "undefined") return null;
@@ -130,6 +162,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!payload) return;
+    const activePayload = payload;
     let isCancelled = false;
     const controller = new AbortController();
 
@@ -140,7 +173,7 @@ export default function ResultsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify(payload),
+          body: JSON.stringify(activePayload),
         });
         const data = await readAnalysisResponse(response);
         if (isCancelled) return;
@@ -150,9 +183,29 @@ export default function ResultsPage() {
         }
         setAnalysis(data.analysis);
         setClinicalNote(data.analysis.clinicalNote);
+        setSoapNote(data.analysis.soapNote);
         setReferralLetter(data.analysis.referralLetter);
+        setWorkNote(data.analysis.workNote);
         setProvider(data.provider ?? null);
         setModelName(data.model ?? "");
+
+        if (userId && activePayload.caseId) {
+          const existing = loadSavedCases(userId).find(
+            (item) => item.id === activePayload.caseId
+          );
+          const now = new Date().toISOString();
+          saveClinicalCase(userId, {
+            id: activePayload.caseId,
+            label: activePayload.caseLabel ?? existing?.label ?? "Anonymized case",
+            notes: activePayload.notes,
+            summary: activePayload.summary,
+            followUp: activePayload.followUp,
+            referralSpecialty: activePayload.referralSpecialty,
+            createdAt: existing?.createdAt ?? now,
+            updatedAt: now,
+            analysis: data.analysis,
+          });
+        }
       } catch {
         if (!isCancelled) setError("Analysis failed. Check your connection and retry.");
       }
@@ -163,7 +216,7 @@ export default function ResultsPage() {
       isCancelled = true;
       controller.abort();
     };
-  }, [payload]);
+  }, [payload, userId]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -226,6 +279,15 @@ export default function ResultsPage() {
               </p>
             </section>
 
+            <section className={`rounded-xl border p-5 urgency-${analysis.urgency.level}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em]">Calibrated urgency</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h2 className="display-title text-2xl capitalize">{analysis.urgency.level}</h2>
+                <span className="pill">{analysis.urgency.timeframe}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 opacity-90">{analysis.urgency.rationale}</p>
+            </section>
+
             <section className="surface-card p-4 md:p-6">
               <h2 className="display-title text-xl md:text-2xl">Ranked differential</h2>
               <div className="mt-4 space-y-3">
@@ -248,10 +310,52 @@ export default function ResultsPage() {
               <ListCard title="Less likely from current notes" tone="amber" items={analysis.lessLikely} />
             </div>
 
+            <ListCard title="Next best actions" tone="green" items={analysis.nextBestActions} />
+
+            <section className="surface-card p-4 md:p-6">
+              <h2 className="display-title text-xl">Guideline evidence</h2>
+              <p className="mt-2 text-sm text-cyan-100/65">
+                Open each source and confirm currency and local applicability before use.
+              </p>
+              {analysis.guidelineReferences.length ? (
+                <div className="mt-4 space-y-3">
+                  {analysis.guidelineReferences.map((reference) => (
+                    <article key={`${reference.title}-${reference.url}`} className="rounded-lg border border-cyan-200/15 bg-cyan-950/35 p-4">
+                      {safeHttpUrl(reference.url) ? (
+                        <a href={safeHttpUrl(reference.url) ?? undefined} target="_blank" rel="noopener noreferrer" className="font-semibold text-cyan-200 underline underline-offset-4">
+                          {reference.title}
+                        </a>
+                      ) : (
+                        <p className="font-semibold text-cyan-100">{reference.title}</p>
+                      )}
+                      <p className="mt-1 text-xs text-cyan-100/60">
+                        {reference.organization} · {reference.year || "Year not stated"}
+                      </p>
+                      <p className="mt-2 text-sm text-cyan-50/80">{reference.relevance}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-lg border border-amber-300/25 bg-amber-400/8 p-3 text-sm text-amber-100">
+                  No verified guideline source was returned. Do not infer guideline support from this analysis.
+                </p>
+              )}
+            </section>
+
             <div className="grid gap-5 lg:grid-cols-2">
               <DraftEditor title="Clinical note" value={clinicalNote} onChange={setClinicalNote} />
+              <DraftEditor title="SOAP note" value={soapNote} onChange={setSoapNote} />
               <DraftEditor title="Referral letter" value={referralLetter} onChange={setReferralLetter} />
+              <DraftEditor title="Privacy-conscious work note" value={workNote} onChange={setWorkNote} />
             </div>
+
+            <section className="rounded-xl border border-cyan-300/25 bg-cyan-500/8 p-4 text-sm text-cyan-50/85">
+              <p className="font-semibold text-cyan-50">Medication calculation boundary</p>
+              <p className="mt-2">{analysis.medicationSafetyNote}</p>
+              <button onClick={() => router.push("/calculators")} className="btn-muted mt-4 px-4 py-2">
+                Open guarded dose calculator
+              </button>
+            </section>
 
             <section className="rounded-xl border border-amber-300/35 bg-amber-400/10 p-4 text-sm text-amber-100">
               {analysis.safetyNote}

@@ -152,6 +152,31 @@ body {
   color: #a7f3d0;
 }
 
+.urgency-emergency {
+  border-color: rgba(251, 113, 133, 0.65);
+  background: rgba(159, 18, 57, 0.28);
+  color: #ffe4e6;
+}
+
+.urgency-urgent {
+  border-color: rgba(251, 146, 60, 0.55);
+  background: rgba(154, 52, 18, 0.24);
+  color: #ffedd5;
+}
+
+.urgency-soon {
+  border-color: rgba(250, 204, 21, 0.45);
+  background: rgba(133, 77, 14, 0.2);
+  color: #fef9c3;
+}
+
+.urgency-routine,
+.urgency-monitor {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(6, 95, 70, 0.2);
+  color: #d1fae5;
+}
+
 .field {
   padding: 0.8rem 0.95rem;
 }

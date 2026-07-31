@@ -47,9 +47,10 @@ function getOllamaConfig() {
   };
 }
 
-function buildPrompt(input: { notes?: string; summary?: string }) {
+function buildPrompt(input: { notes?: string; summary?: string; followUp?: string }) {
   const notes = input.notes?.trim() ?? "";
   const summary = input.summary?.trim() ?? "";
+  const followUp = input.followUp?.trim() ?? "";
 
   const system = [
     "You are a conservative clinical reasoning support assistant for clinicians.",
@@ -57,7 +58,7 @@ function buildPrompt(input: { notes?: string; summary?: string }) {
     "Return concise structured reasoning support only.",
     "Do not mention protected health information or ask for identifying details.",
     "Respond with valid JSON matching this exact schema:",
-    '{"possibleConsiderations": string[], "suggestedChecks": string[], "redFlags": string[], "lessLikely": string[], "detectedSignals": string[], "safetyNote": string}',
+    '{"clinicalSummary": string, "possibleConsiderations": string[], "differential": {"condition": string, "rationale": string, "priority": "high"|"medium"|"low"}[], "suggestedChecks": string[], "redFlags": string[], "lessLikely": string[], "missingInformation": string[], "detectedSignals": string[], "reasoningNarrative": string, "urgency": {"level":"emergency"|"urgent"|"soon"|"routine"|"monitor","timeframe":string,"rationale":string}, "nextBestActions": string[], "guidelineReferences": [], "clinicalNote": string, "soapNote": string, "referralLetter": string, "workNote": string, "medicationSafetyNote": string, "safetyNote": string}',
     "Rules:",
     "- Keep possibleConsiderations to 3-5 items.",
     "- Keep suggestedChecks to 3-6 items.",
@@ -72,6 +73,7 @@ function buildPrompt(input: { notes?: string; summary?: string }) {
     "Analyze the following clinician-authored case notes.",
     notes ? `Notes:\n${notes}` : "Notes:\nNone provided.",
     summary ? `Structured summary:\n${summary}` : "Structured summary:\nNone provided.",
+    followUp ? `Follow-up results:\n${followUp}` : "Follow-up results:\nNone provided.",
   ].join("\n\n");
 
   return { system, user };
@@ -103,6 +105,18 @@ export function normalizeClinicalAnalysis(payload: unknown): ClinicalAnalysis {
     payload && typeof payload === "object"
       ? (payload as Record<string, unknown>)
       : {};
+  const urgencyRecord =
+    record.urgency && typeof record.urgency === "object"
+      ? (record.urgency as Record<string, unknown>)
+      : {};
+  const urgencyLevel =
+    urgencyRecord.level === "emergency" ||
+    urgencyRecord.level === "urgent" ||
+    urgencyRecord.level === "soon" ||
+    urgencyRecord.level === "routine" ||
+    urgencyRecord.level === "monitor"
+      ? urgencyRecord.level
+      : "urgent";
 
   return {
     clinicalSummary:
@@ -157,14 +171,59 @@ export function normalizeClinicalAnalysis(payload: unknown): ClinicalAnalysis {
       record.reasoningNarrative.trim()
         ? record.reasoningNarrative.trim()
         : "Review the documented features against the differential and resolve missing information before deciding next steps.",
+    urgency: {
+      level: urgencyLevel,
+      timeframe:
+        typeof urgencyRecord.timeframe === "string" && urgencyRecord.timeframe.trim()
+          ? urgencyRecord.timeframe.trim()
+          : "Urgency requires clinician confirmation.",
+      rationale:
+        typeof urgencyRecord.rationale === "string" && urgencyRecord.rationale.trim()
+          ? urgencyRecord.rationale.trim()
+          : "Classify urgency using current physiology, examination, and red flags.",
+    },
+    nextBestActions: toStringArray(record.nextBestActions, [
+      "Resolve time-critical red flags before routine investigation",
+    ]).slice(0, 6),
+    guidelineReferences: Array.isArray(record.guidelineReferences)
+      ? record.guidelineReferences
+          .filter(
+            (entry): entry is Record<string, unknown> =>
+              Boolean(entry) && typeof entry === "object"
+          )
+          .map((entry) => ({
+            title: typeof entry.title === "string" ? entry.title.trim() : "",
+            organization:
+              typeof entry.organization === "string" ? entry.organization.trim() : "",
+            year: typeof entry.year === "string" ? entry.year.trim() : "",
+            url: typeof entry.url === "string" ? entry.url.trim() : "",
+            relevance:
+              typeof entry.relevance === "string" ? entry.relevance.trim() : "",
+          }))
+          .filter((entry) => entry.title && entry.organization)
+          .slice(0, 5)
+      : [],
     clinicalNote:
       typeof record.clinicalNote === "string" && record.clinicalNote.trim()
         ? record.clinicalNote.trim()
         : "Clinical note draft was not generated.",
+    soapNote:
+      typeof record.soapNote === "string" && record.soapNote.trim()
+        ? record.soapNote.trim()
+        : "SOAP note draft was not generated.",
     referralLetter:
       typeof record.referralLetter === "string" && record.referralLetter.trim()
         ? record.referralLetter.trim()
         : "Referral letter draft was not generated.",
+    workNote:
+      typeof record.workNote === "string" && record.workNote.trim()
+        ? record.workNote.trim()
+        : "Work note draft was not generated.",
+    medicationSafetyNote:
+      typeof record.medicationSafetyNote === "string" &&
+      record.medicationSafetyNote.trim()
+        ? record.medicationSafetyNote.trim()
+        : "Use only a verified medicine-specific protocol and independently confirm every dose.",
     safetyNote:
       typeof record.safetyNote === "string" && record.safetyNote.trim()
         ? record.safetyNote.trim()
@@ -221,6 +280,7 @@ async function analyzeWithModel(params: {
 export async function analyzeWithOllama(input: {
   notes?: string;
   summary?: string;
+  followUp?: string;
 }): Promise<OllamaAnalysisResult> {
   const { baseUrl, models, timeoutMs } = getOllamaConfig();
   const { system, user } = buildPrompt(input);
